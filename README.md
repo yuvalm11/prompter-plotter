@@ -1,7 +1,9 @@
 # Prompter Plotter
 ## Introduction
 
-![Watch the video in the repo!](https://github.com/user-attachments/assets/56bca8af-6ae2-48f6-942a-378619c0a5f5)
+
+![ Watch the video in the repo! ](https://github.com/user-attachments/assets/4e38d26d-b78d-4b40-9968-4daa16c79359)
+
 
 I am building a machine that will use AI image generation to process a natural language text prompt into a real life drawing. 
 
@@ -13,7 +15,8 @@ I relied a lot on Jake Read's stepper motor control firmware and circuits. I was
 
 ## Mechanics
 
-![ Watch the video in the repo!](https://github.com/user-attachments/assets/291be996-974b-4230-b237-a01ca69c3bee)
+
+![ Watch the video in the repo! ](https://github.com/user-attachments/assets/ebbefab2-2eee-4592-a7b4-9ad754dcc5d3)
 
 
 The machine achieves a fast and smooth 2-axis motion by controlling two carriages on only one track. If the distance between the carriages stays the same, and the carriages move along the track, the pointer will move on the x-axis. 
