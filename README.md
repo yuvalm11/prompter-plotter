@@ -41,3 +41,5 @@ The whole machine is abstracted to a python instance and can be controlled throu
 I am yet to plug in the API of a strong external model for the purpose of image generation but the pipeline of processing its outputs is mostly ready. 
 
 First the user's prompt is edited to fit the machine capabilities (i.e. one color line drawings), then a list of contours is extracted from the generated image. Those are filtered, scaled and sent to the machine as drawing instructions.
+
+![](/assets/contours.png)

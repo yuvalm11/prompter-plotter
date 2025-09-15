@@ -7,7 +7,7 @@ def get_image(prompt: str) -> np.ndarray:
     """
     Generate an image based on the prompt.
     The prompt would be a string that describes an object or a scene
-    and will be edited to include stylistic featurs.
+    and will be edited to include stylistic features.
     """
     instruction = prompt
     stylistic_features = ". Make it a line drawing. keep it simple. Use a black line on a white background."
@@ -19,7 +19,6 @@ def get_image(prompt: str) -> np.ndarray:
 
 
 def get_xys(img: np.ndarray) -> list:
-    print(img)
     img = cv2.cvtColor(img, cv2.COLOR_BGR2GRAY)
     img = cv2.threshold(img, 127, 255, cv2.THRESH_BINARY_INV)[1]
 
@@ -32,8 +31,8 @@ def get_xys(img: np.ndarray) -> list:
         xs = contour[:, 0, 0]
         ys = contour[:, 0, 1]
 
-        xs = np.append(xs, xs[0]) / 1024
-        ys = 1 - np.append(ys, ys[0]) / 1024
+        xs = np.append(xs, xs[0]) #/ 1024
+        ys = 1024 - np.append(ys, ys[0]) #/ 1024
 
         opt.append((xs, ys))
 
@@ -42,12 +41,12 @@ def get_xys(img: np.ndarray) -> list:
 
 # Example usage
 img = get_image("A cat")
-
-# plt.imshow(img)
+plt.imshow(img, origin='upper', extent=(1024, img.shape[1]*2, 0, img.shape[0]))
 
 xys = get_xys(img)
 for xy in xys:
     plt.plot(xy[0], xy[1], c='green', lw=1)
 
-print(xys)
+plt.xlim((0,2048))
+plt.ylim((0,1024))
 plt.show()
