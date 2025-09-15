@@ -1,4 +1,6 @@
 *config.json
+*.gcode
+*python/maxl/test_files
 
 # Byte-compiled / optimized / DLL files
 __pycache__/
