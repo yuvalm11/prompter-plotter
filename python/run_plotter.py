@@ -1,3 +1,8 @@
+import os
+import sys
+# Ensure local python/ directory is on sys.path so imports like `osap` work
+sys.path.insert(0, os.path.dirname(__file__))
+
 import cv2
 import asyncio
 import traceback
@@ -15,60 +20,90 @@ system_twin_to_real_ms = 200
     # 100  - clean
     # 500  - speed
     # 1500 - ludicrous
-draw_rate = 50
+draw_rate = 100
 jog_rate = draw_rate
 machine_extents = [250, 250]
 
+class PlotterController:
+    def __init__(self):
+        self.osap = None
+        self.machine = None
+        self.loop_task = None
+        self.started = False
+
+    async def start(self):
+        if self.started:
+            return
+        try:
+            self.osap = OSAP("py-printer")
+            loop = asyncio.get_event_loop()
+            self.loop_task = loop.create_task(self.osap.runtime.run())
+            usbserial_links = AutoUSBPorts().ports
+            for usbserial in usbserial_links:
+                self.osap.link(usbserial)
+            await asyncio.sleep(0.25)
+            system_map = await self.osap.netrunner.update_map()
+            system_map.print()
+            await self.osap.netrunner.await_time_settle(print_updates=True)
+            self.machine = VVelocityMachineMotion(self.osap, system_interpolation_interval, system_twin_to_real_ms, extents = machine_extents)
+            await self.machine.begin()
+            await asyncio.sleep(1)
+            await self.machine.queue_planner.goto_via_queue([0,0,0], draw_rate)
+            self.started = True
+        except Exception as err:
+            print("ERROR during start:")
+            print(err)
+            print(traceback.format_exc())
+            await self.shutdown()
+            raise
+
+    async def home(self):
+        if not self.machine:
+            raise RuntimeError("Machine not started")
+        await self.machine.home()
+
+    async def goto_origin(self):
+        if not self.machine:
+            raise RuntimeError("Machine not started")
+        await self.machine.queue_planner.goto_via_queue([0,0,0], draw_rate)
+
+    async def flush(self):
+        if not self.machine:
+            raise RuntimeError("Machine not started")
+        await self.machine.queue_planner.flush_queue()
+
+    async def shutdown(self):
+        try:
+            if self.machine is not None:
+                await self.machine.queue_planner.goto_via_queue([0,0,0], draw_rate)
+                await self.machine.queue_planner.flush_queue()
+                await self.machine.shutdown()
+        finally:
+            self.machine = None
+            self.started = False
+            print("shutdown OK")
+
 async def main():
+    controller = PlotterController()
     try:
-        machine = None 
-        test_fet = None 
-        osap = OSAP("py-printer")
-        loop = asyncio.get_event_loop()
-        loop.create_task(osap.runtime.run())
-        usbserial_links = AutoUSBPorts().ports
-        for usbserial in usbserial_links:
-            osap.link(usbserial)
-        await asyncio.sleep(0.25)
-        system_map = await osap.netrunner.update_map()
-        system_map.print()
-        await osap.netrunner.await_time_settle(print_updates=True)
-        machine = VVelocityMachineMotion(osap, system_interpolation_interval, system_twin_to_real_ms, extents = machine_extents)
-        await machine.begin()
-        await asyncio.sleep(1)
-
-        # await machine.home()
-        await machine.queue_planner.goto_via_queue([0,0,0], draw_rate)
-
-
+        await controller.start()
         ######################################################
         ############## DRAWING CODE STARTS HERE ##############
         ######################################################
-
-
-        
-
+        # Add drawing logic here or use controller methods from elsewhere
         ######################################################
         ############### DRAWING CODE ENDS HERE ###############
         ######################################################
-
-
         await asyncio.sleep(1)
-        await machine.queue_planner.goto_via_queue([0,0,0], draw_rate)
-        await machine.queue_planner.flush_queue()
-
+        await controller.goto_origin()
+        await controller.flush()
     except Exception as err:
         print("ERROR:")
         print(err)
         print(traceback.format_exc())
-
-    finally: 
+    finally:
         print("Finally: attempting shutdown...")
-        if test_fet is not None:
-            await test_fet.set_gate(0) 
-        if machine is not None:
-            await machine.shutdown() 
-        print("shutdown OK")
+        await controller.shutdown()
 
 if __name__ == "__main__":
     asyncio.run(main())

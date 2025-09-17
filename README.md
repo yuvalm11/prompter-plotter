@@ -39,10 +39,16 @@ The servo is also controlled by a XIAO RP2040.
 
 The whole machine is abstracted to a python instance and can be controlled through a convenient python code. This piece of software mostly takes care of high level issues like setting up the communication and time synchronization, homing the machine, loading and processing machine instructions, etc.
 
+I also built a simple web interface to control the machine. There, the user can start and stop the machine, home it, and input a prompt to generate an image.
+
 ## Image generation 
 
-I am yet to plug in the API of a strong external model for the purpose of image generation but the pipeline of processing its outputs is mostly ready. 
+I am using OpenAI's image generation API. The user's prompt the user's prompt is edited to fit the machine capabilities (i.e. one color line drawings), then a list of contours is extracted from the binary version of the generated image. Those are filtered, scaled and sent to the machine as drawing instructions.
 
-First the user's prompt is edited to fit the machine capabilities (i.e. one color line drawings), then a list of contours is extracted from the generated image. Those are filtered, scaled and sent to the machine as drawing instructions.
+The usage of the generation functions looks like this:
+
+![](/assets/gen_code.png)
+
+and the resulting machine instructions look like this:
 
 ![](/assets/contours.png)
