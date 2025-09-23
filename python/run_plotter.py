@@ -20,16 +20,21 @@ system_twin_to_real_ms = 200
     # 100  - clean
     # 500  - speed
     # 1500 - ludicrous
-draw_rate = 100
-jog_rate = draw_rate
-machine_extents = [250, 250]
 
 class PlotterController:
-    def __init__(self):
+    def __init__(
+            self, 
+            draw_rate: int = 100, 
+            jog_rate: int = 100, 
+            machine_extents = [235, 305]
+        ):
         self.osap = None
         self.machine = None
         self.loop_task = None
         self.started = False
+        self.draw_rate = draw_rate
+        self.jog_rate = jog_rate
+        self.machine_extents = machine_extents
 
     async def start(self):
         if self.started:
@@ -45,10 +50,10 @@ class PlotterController:
             system_map = await self.osap.netrunner.update_map()
             system_map.print()
             await self.osap.netrunner.await_time_settle(print_updates=True)
-            self.machine = VVelocityMachineMotion(self.osap, system_interpolation_interval, system_twin_to_real_ms, extents = machine_extents)
+            self.machine = VVelocityMachineMotion(self.osap, system_interpolation_interval, system_twin_to_real_ms, extents = self.machine_extents)
             await self.machine.begin()
             await asyncio.sleep(1)
-            await self.machine.queue_planner.goto_via_queue([0,0,0], draw_rate)
+            await self.machine.queue_planner.goto_via_queue([0,0,0], self.draw_rate)
             self.started = True
         except Exception as err:
             print("ERROR during start:")
@@ -65,7 +70,7 @@ class PlotterController:
     async def goto_origin(self):
         if not self.machine:
             raise RuntimeError("Machine not started")
-        await self.machine.queue_planner.goto_via_queue([0,0,0], draw_rate)
+        await self.machine.queue_planner.goto_via_queue([0,0,0], self.draw_rate)
 
     async def flush(self):
         if not self.machine:
@@ -75,7 +80,7 @@ class PlotterController:
     async def shutdown(self):
         try:
             if self.machine is not None:
-                await self.machine.queue_planner.goto_via_queue([0,0,0], draw_rate)
+                await self.machine.queue_planner.goto_via_queue([0,0,0], self.draw_rate)
                 await self.machine.queue_planner.flush_queue()
                 await self.machine.shutdown()
         finally:

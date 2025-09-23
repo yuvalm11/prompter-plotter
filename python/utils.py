@@ -33,7 +33,7 @@ def get_xys(img: np.ndarray) -> list:
     img = cv2.threshold(img, 127, 255, cv2.THRESH_BINARY_INV)[1]
 
     contours = cv2.findContours(img, cv2.RETR_TREE, cv2.CHAIN_APPROX_SIMPLE)[0]
-
+    contours = sorted(contours, key=lambda c: cv2.contourArea(c), reverse=True)
     opt = []
     for contour in contours:
         area = cv2.contourArea(contour)
@@ -52,14 +52,16 @@ def get_xys(img: np.ndarray) -> list:
 
 if __name__ == "__main__":
     # Example usage for debugging
-    img_url = get_image_url("A classy cat")
+    # img_url = get_image_url("An elephant in the jungle", model="dall-e-3")
+    img_url = "https://REMOVED_SECRET_DOMAIN.blob.core.windows.net/private/org-wZmXWiEEKhBYtviUXA4xBoUp/user-IkZP1XcNbcjq10i6pQrYzD68/img-Df4cekH0PWUNqS6uon5igEgk.png?st=2025-09-23T19%3A51%3A10Z&se=2025-09-23T21%3A51%3A10Z&sp=r&sv=2024-08-04&sr=b&rscd=inline&rsct=image/png&skoid=1726b4ce-fee1-450b-8b92-1731ad8745f6&sktid=a48cca56-e6da-484e-a814-9c849652bcb3&skt=2025-09-23T20%3A51%3A10Z&ske=2025-09-24T20%3A51%3A10Z&sks=b&skv=2024-08-04&sig=CKIxdeE9D8C4/u8pfq2dQ5zACu4F1giDYXyGE4uHT38%3D"
     img = requests.get(img_url).content
     img = cv2.imdecode(np.frombuffer(img, dtype=np.uint8), cv2.IMREAD_COLOR)
 
     xys = get_xys(img)
 
-    for xy in xys:
-        plt.plot(xy[0], xy[1], c='green', lw=1)
+    for x, y in xys:
+        plt.plot(x, y, c='green', lw=2)
     plt.xlim((0,1))
     plt.ylim((0,1))
+    plt.gca().set_aspect('equal', adjustable='box')
     plt.show()
