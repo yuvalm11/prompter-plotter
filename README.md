@@ -41,9 +41,11 @@ The whole machine is abstracted to a python instance and can be controlled throu
 
 I also built a simple web interface to control the machine. There, the user can start and stop the machine, home it, and input a prompt to generate an image.
 
+![](/assets/ui.png)
+
 ## Image generation 
 
-I am using OpenAI's image generation API. The user's prompt the user's prompt is edited to fit the machine capabilities (i.e. one color line drawings), then a list of contours is extracted from the binary version of the generated image. Those are filtered, scaled and sent to the machine as drawing instructions.
+I am using OpenAI's image generation API. The user's prompt is edited to fit the machine capabilities (i.e. one color line drawings), then a list of contours is extracted from the binary version of the generated image. Those are filtered, scaled and sent to the machine as drawing instructions.
 
 The usage of the generation functions looks like this:
 
