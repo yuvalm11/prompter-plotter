@@ -4,7 +4,7 @@ import asyncio
 from fastapi import FastAPI, UploadFile, File, Form
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import HTMLResponse
-from typing import Dict, Any, List
+from typing import Dict, Any, List, Tuple
 import uvicorn
 import numpy as np
 import cv2
@@ -24,7 +24,7 @@ app.add_middleware(
     allow_headers=["*"],
 )
 
-controller = PlotterController()
+controller = PlotterController(jog_rate=300)
 
 @app.get("/", response_class=HTMLResponse)
 async def index() -> str:
@@ -156,32 +156,70 @@ async def api_prompt(payload: Dict[str, Any]) -> Dict[str, Any]:
     img = cv2.imdecode(np.frombuffer(img, dtype=np.uint8), cv2.IMREAD_COLOR)
     xys = get_xys(img)
     pts = _scale_paths(xys)
-    # await _queue_points(pts)
+
+    minx, miny, maxx, maxy = float('inf'), float('inf'), float('-inf'), float('-inf')
+    for c in pts:
+        for p in c:
+            x, y = p
+            minx = min(minx, x)
+            miny = min(miny, y)
+            maxx = max(maxx, x)
+            maxy = max(maxy, y)
+    
+    print(minx, miny, maxx, maxy)
+    
+    await _queue_points(pts)
     return {"status": "ok", "points": len(pts), "url": img_url}
 
 @app.post("/api/image")
 async def api_image(file: UploadFile = File(...)) -> Dict[str, Any]:
     data = await file.read()
     arr = np.frombuffer(data, dtype=np.uint8)
-    img = cv2.imdecode(arr, cv2.IMREAD_COLOR)
-    xys = get_xys(img)
-    pts = _scale_paths(xys)
+    # img = cv2.imdecode(arr, cv2.IMREAD_COLOR)
+    # xys = get_xys(img)
+    # pts = _scale_paths(xys)
+    pts = [[(0, 0), (235, 0), (235, 235), (0, 235)]]
 
     await _queue_points(pts)
     return {"status": "ok", "points": len(pts)}
 
-async def _queue_points(points: List[List[float]]):
-    if not controller.started:
-        await controller.start()
-    # Simple streaming of points to queue
-    for xyz in points:
-        await controller.machine.queue_planner.goto_via_queue(xyz, 100)
+async def _queue_points(points: List[List[Tuple[float, float]]]):
+    print("STARTED _queue_points")
+    print(controller.machine.queue_planner._get_position_tail())
+
+    await asyncio.sleep(3)
+
+    print("STARTED _queue_points 2")
+    
+    for contour in points:
+        contour.append(contour[0])  # close the contour
+        for point in contour:
+            x, y = point
+            z = 0
+            await controller.machine.queue_planner.goto_via_queue([x, y, z], controller.draw_rate)
+
+        # TODO: add here pen up when implemented
+
+    print("STARTED _queue_points 3")
+
     await controller.flush()
 
-def _scale_paths(xys: List[List[float]]) -> List[List[float]]:
-    scale_factor = min(controller.machine_extents)
-    xys = [[x * scale_factor, y * scale_factor] for x, y in xys]
-    return xys
+def _scale_paths(xys: List[List[Tuple[float, float]]]) -> List[List[Tuple[float, float]]]:
+    points = [(x, y) for contour in xys for x, y in contour]
+    minx, miny = min(x for x,y in points), min(y for x,y in points)
+    maxx, maxy = max(x for x,y in points), max(y for x,y in points)
+    width, height = maxx - minx, maxy - miny
+
+    scale = 235 / max(width, height)
+    scaled = [[((x - minx) * scale, (y - miny) * scale) for x, y in contour] for contour in xys]
+    
+    offset = (235 - min(width, height) * scale) / 2
+    if width > height:
+        scaled_xys = [[(x, y + offset) for x, y in contour] for contour in scaled]
+    else:
+        scaled_xys = [[(x + offset, y) for x, y in contour] for contour in scaled]
+
+    return scaled_xys
 
 
 def run():

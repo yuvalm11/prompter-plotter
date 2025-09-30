@@ -121,14 +121,10 @@ class VVelocityMachineMotion:
                 await self.queue_planner.goto_and_await([x2+dx-25 , y2+dy-10, z2], home_rate)
                 self.queue_planner.set_current_position([365,305,0])
                 break
-            
 
-
-    # TODO: should these be within queue_planner ? 
     async def goto_relative(self, xyz_rel, e_length_scalar, rate):
         # ... from this posn, 
         xyze = await self.queue_planner.halt()
-
         # ... moving this len, 
         rel_dist = np.linalg.norm(xyz_rel)
 
@@ -140,9 +136,7 @@ class VVelocityMachineMotion:
         print(F"REL {rel_vect} GOTO {xyze}")
         await self.queue_planner.goto_and_await(xyze, rate)
 
-    # TODO: likewise, most API should be able to exclude DOF at will ? 
     async def goto_absolute_sloppy(self, xyze_targ, rate):
-        # ... from this posn, 
         xyze = await self.queue_planner.halt()
         xyze[:len(xyze_targ)] = xyze_targ 
         await self.queue_planner.goto_and_await(xyze, rate) 

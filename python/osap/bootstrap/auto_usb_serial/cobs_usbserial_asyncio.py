@@ -39,6 +39,14 @@ class CobsUsbSerial:
     def attach(self, on_data):
         self.on_data_callable = on_data
 
+    def close(self):
+        try:
+            if self.ser and self.ser.is_open:
+                self.ser.flush()
+                self.ser.close()
+        except Exception:
+            pass
+
     # loops forever,
     async def run(self):
         while True:
