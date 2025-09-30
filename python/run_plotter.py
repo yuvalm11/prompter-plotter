@@ -1,6 +1,5 @@
 import os
 import sys
-# Ensure local python/ directory is on sys.path so imports like `osap` work
 sys.path.insert(0, os.path.dirname(__file__))
 
 import cv2
@@ -12,6 +11,10 @@ from osap.bootstrap.auto_usb_serial.auto_usb_serial import AutoUSBPorts
 from maxl.types import MAXLInterpolationIntervals 
 from modules.vvelocity_motion import VVelocityMachineMotion
 from svg import svg_tools
+
+import requests
+from utils import get_xys
+
 
 system_interpolation_interval = MAXLInterpolationIntervals.INTERVAL_16384
 system_twin_to_real_ms = 200
@@ -25,7 +28,7 @@ class PlotterController:
     def __init__(
             self, 
             draw_rate: int = 100, 
-            jog_rate: int = 100, 
+            jog_rate: int = 100,
             machine_extents = [235, 305]
         ):
         self.osap = None
@@ -43,8 +46,8 @@ class PlotterController:
             self.osap = OSAP("py-printer")
             loop = asyncio.get_event_loop()
             self.loop_task = loop.create_task(self.osap.runtime.run())
-            usbserial_links = AutoUSBPorts().ports
-            for usbserial in usbserial_links:
+            self._usbserial_links = AutoUSBPorts().ports
+            for usbserial in self._usbserial_links:
                 self.osap.link(usbserial)
             await asyncio.sleep(0.25)
             system_map = await self.osap.netrunner.update_map()
@@ -84,6 +87,30 @@ class PlotterController:
                 await self.machine.queue_planner.flush_queue()
                 await self.machine.shutdown()
         finally:
+            # cancel runtime loop and dissolve links
+            if self.loop_task is not None:
+                self.loop_task.cancel()
+                try:
+                    await self.loop_task
+                except BaseException:
+                    pass
+                self.loop_task = None
+            # dissolve links from OSAP and close serials
+            if self.osap is not None:
+                for link in list(self.osap.runtime.links):
+                    if link is not None:
+                        try:
+                            link.dissolve()
+                        except Exception:
+                            pass
+            if hasattr(self, "_usbserial_links") and self._usbserial_links is not None:
+                for usb in self._usbserial_links:
+                    try:
+                        if hasattr(usb, "close"):
+                            usb.close()
+                    except Exception:
+                        pass
+                self._usbserial_links = None
             self.machine = None
             self.started = False
             print("shutdown OK")
@@ -95,7 +122,7 @@ async def main():
         ######################################################
         ############## DRAWING CODE STARTS HERE ##############
         ######################################################
-        # Add drawing logic here or use controller methods from elsewhere
+        # Add drawing logic here or use controller methods from elsewhere 
         ######################################################
         ############### DRAWING CODE ENDS HERE ###############
         ######################################################

@@ -132,12 +132,19 @@ class MAXLCore:
     async def shutdown(self):
         print("MAXL: ... shutting down")
         self._run_main_loop = False 
-        await self.main_loop_task
+        try:
+            await self.main_loop_task
+        except BaseException:
+            pass
         for a, actuator in enumerate(self.actuators):
             if actuator is not None:
                 print(f"MAXL: attempting shutdown of {actuator.device_name} ...")
                 if isinstance(actuator, MAXLStepper):
-                    await actuator.set_current_scale(0) 
+                    try:
+                        await actuator.set_current_scale(0)
+                    except Exception:
+                        # swallow RPC/link errors during shutdown to allow graceful exit
+                        pass 
                 print(f"MAXL: ... shutdown of {actuator.device_name} OK")
         print("MAXL: ... shutdown OK")
 
@@ -155,7 +162,7 @@ class MAXLCore:
                 if (self.control_points[-1].time + self.interpolation_interval_us) < (now + self.twin_to_real_gap_us):
                     sluggishness_gap = (now + self.twin_to_real_gap_us) - (self.control_points[-1].time + self.interpolation_interval_us * 2)
                     if sluggishness_gap > 10000:
-                        print(f"MAXL: WARNING: pt gen is sluggish by {sluggishness_gap}us")
+                        # print(f"MAXL: WARNING: pt gen is sluggish by {sluggishness_gap}us")
                         if not self._do_unsafe_recalculations:
                             self.queue_planner.do_recalculations = False 
                     else:
