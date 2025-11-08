@@ -62,3 +62,4 @@ and the resulting machine instructions look like this:
 - [ ] Add a live speed control to the web interface
 - [ ] Emergency stop button
 - [ ] Artistic algorithm, shading, etc.
+- [ ] Make a good demo video! 
