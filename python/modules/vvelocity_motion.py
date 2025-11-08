@@ -70,7 +70,7 @@ class VVelocityMachineMotion:
 
         self._motor_a = MAXLStepper(self.osap, "motor_a")
         self._motor_b = MAXLStepper(self.osap, "motor_b")
-        self._low_fet =  None # LowFet(self.osap, "low_fet")
+        self._low_fet = None # LowFet(self.osap, "low_fet")
 
         self._maxl_core = MAXLCore(self.osap, MAXLCoreConfig(
             actuators = [self._motor_a, self._motor_b, self._low_fet],

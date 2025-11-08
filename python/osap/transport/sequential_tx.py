@@ -80,7 +80,7 @@ class SequentialTransmitter:
                 else:
                     await self.port.await_cts(retry_time_us)
                     retry_attempts += 1 
-                    print(f"SEQ_TX RT_ATT: {retry_attempts}")
+                    # print(f"SEQ_TX RT_ATT: {retry_attempts}")
                     send_time = get_microsecond_timestamp() 
                     self.port.send(payload, destination_route, destination_port) 
             else:

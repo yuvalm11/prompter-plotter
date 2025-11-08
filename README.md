@@ -54,3 +54,11 @@ The usage of the generation functions looks like this:
 and the resulting machine instructions look like this:
 
 ![](/assets/contours.png)
+
+### Future improvements
+
+- [ ] fine-tune the threshold for the minimum distance between drawing points to avoid overlapping
+- [ ] Add a progress bar to the web interface to show the user how much of the drawing has been completed
+- [ ] Add a live speed control to the web interface
+- [ ] Emergency stop button
+- [ ] Artistic algorithm, shading, etc.

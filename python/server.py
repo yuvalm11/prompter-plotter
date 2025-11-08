@@ -10,9 +10,10 @@ import numpy as np
 import cv2
 import matplotlib.pyplot as plt
 import requests
+import matplotlib.pyplot as plt
 
 from run_plotter import PlotterController
-from utils import get_image_url, get_xys
+from utils import get_image_url, get_xys, scale_paths
 
 app = FastAPI()
 
@@ -155,18 +156,11 @@ async def api_prompt(payload: Dict[str, Any]) -> Dict[str, Any]:
     img = requests.get(img_url).content
     img = cv2.imdecode(np.frombuffer(img, dtype=np.uint8), cv2.IMREAD_COLOR)
     xys = get_xys(img)
-    pts = _scale_paths(xys)
+    extent = min(controller.machine_extents)
+    pts = scale_paths(xys, extent)
+    pts = [[(0, 0), (235, 0), (235, 235), (0, 235)]] + pts
 
-    minx, miny, maxx, maxy = float('inf'), float('inf'), float('-inf'), float('-inf')
-    for c in pts:
-        for p in c:
-            x, y = p
-            minx = min(minx, x)
-            miny = min(miny, y)
-            maxx = max(maxx, x)
-            maxy = max(maxy, y)
-    
-    print(minx, miny, maxx, maxy)
+    print(controller.machine.queue_planner._get_position_tail())
     
     await _queue_points(pts)
     return {"status": "ok", "points": len(pts), "url": img_url}
@@ -175,51 +169,39 @@ async def api_prompt(payload: Dict[str, Any]) -> Dict[str, Any]:
 async def api_image(file: UploadFile = File(...)) -> Dict[str, Any]:
     data = await file.read()
     arr = np.frombuffer(data, dtype=np.uint8)
-    # img = cv2.imdecode(arr, cv2.IMREAD_COLOR)
-    # xys = get_xys(img)
-    # pts = _scale_paths(xys)
-    pts = [[(0, 0), (235, 0), (235, 235), (0, 235)]]
+    img = cv2.imdecode(arr, cv2.IMREAD_COLOR)
+    xys = get_xys(img)
+    extent = min(controller.machine_extents)
+    pts = scale_paths(xys, extent)
+    pts = [[(0, 0), (235, 0), (235, 235), (0, 235)]] + pts
+    for contour in pts:
+        for point in contour:
+            plt.plot(point[0], point[1], 'r.')
+    # plt.show()
 
     await _queue_points(pts)
     return {"status": "ok", "points": len(pts)}
 
 async def _queue_points(points: List[List[Tuple[float, float]]]):
-    print("STARTED _queue_points")
-    print(controller.machine.queue_planner._get_position_tail())
-
-    await asyncio.sleep(3)
-
-    print("STARTED _queue_points 2")
-    
+    # pen up
+    await controller.goto_and_wait([0,0,0], controller.draw_rate)
     for contour in points:
         contour.append(contour[0])  # close the contour
+        point = contour[0]
+        await controller.goto_and_wait([point[0], point[1], 0], controller.draw_rate)
+        await controller.goto_and_wait([point[0], point[1], 1], controller.draw_rate)
         for point in contour:
             x, y = point
-            z = 0
-            await controller.machine.queue_planner.goto_via_queue([x, y, z], controller.draw_rate)
-
-        # TODO: add here pen up when implemented
-
-    print("STARTED _queue_points 3")
-
-    await controller.flush()
-
-def _scale_paths(xys: List[List[Tuple[float, float]]]) -> List[List[Tuple[float, float]]]:
-    points = [(x, y) for contour in xys for x, y in contour]
-    minx, miny = min(x for x,y in points), min(y for x,y in points)
-    maxx, maxy = max(x for x,y in points), max(y for x,y in points)
-    width, height = maxx - minx, maxy - miny
-
-    scale = 235 / max(width, height)
-    scaled = [[((x - minx) * scale, (y - miny) * scale) for x, y in contour] for contour in xys]
+            if 0 <= x <= 235 and 0 <= y <= 235:
+                point = [point[0], point[1], 1]
+                await controller.goto(point, controller.draw_rate)
+            else:
+                print(f"WARNING: Point ({x}, {y}) is outside trapezoid bounds")
+                continue
+        await controller.goto_and_wait([point[0], point[1], 0], controller.draw_rate)
     
-    offset = (235 - min(width, height) * scale) / 2
-    if width > height:
-        scaled_xys = [[(x, y + offset) for x, y in contour] for contour in scaled]
-    else:
-        scaled_xys = [[(x + offset, y) for x, y in contour] for contour in scaled]
-
-    return scaled_xys
+    await controller.goto_origin()
+    await controller.flush()
 
 
 def run():
@@ -227,5 +209,3 @@ def run():
 
 if __name__ == "__main__":
     run()
-
-

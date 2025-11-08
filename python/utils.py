@@ -15,20 +15,20 @@ def get_image_url(prompt: str, model: str = "dall-e-2", size: str = "1024x1024")
     The prompt would be a string that describes an object or a scene
     and will be edited to include stylistic features.
     """
-    # instruction = prompt
-    # stylistic_features = ". Make it a line drawing. keep it simple. Use a black line on a white background."
-    # prompt += stylistic_features
+    instruction = prompt
+    stylistic_features = ". Make it a line drawing. keep it very simple. Use a black line on a white background."
+    prompt += stylistic_features
 
-    # result = client.images.generate(
-    #     model=model,
-    #     prompt=prompt,
-    #     size=size
-    # )
+    result = client.images.generate(
+        model=model,
+        prompt=prompt,
+        size=size
+    )
 
-    # print("Generated image in URL: ", result.data[0].url)
+    print("Generated image in URL: ", result.data[0].url)
 
-    # return result.data[0].url
-    return "https://REMOVED_SECRET_DOMAIN.blob.core.windows.net/private/org-wZmXWiEEKhBYtviUXA4xBoUp/user-IkZP1XcNbcjq10i6pQrYzD68/img-Rki4oIWd3mwJ2LchEnuuy2Lb.png?st=2025-09-30T15%3A09%3A27Z&se=2025-09-30T17%3A09%3A27Z&sp=r&sv=2024-08-04&sr=b&rscd=inline&rsct=image/png&REMOVED_SKOID&sktid=a48cca56-e6da-484e-a814-9c849652bcb3&skt=2025-09-30T16%3A09%3A27Z&ske=2025-10-01T16%3A09%3A27Z&sks=b&skv=2024-08-04&REMOVED_SIGNATURE"
+    return result.data[0].url
+    # return "https://REMOVED_SECRET_DOMAIN.blob.core.windows.net/private/org-wZmXWiEEKhBYtviUXA4xBoUp/user-IkZP1XcNbcjq10i6pQrYzD68/img-bVhVMwuDEOJLfp6GFPjLbCAM.png?st=2025-11-02T16%3A14%3A25Z&se=2025-11-02T18%3A14%3A25Z&sp=r&sv=2024-08-04&sr=b&rscd=inline&rsct=image/png&REMOVED_SKOID&sktid=a48cca56-e6da-484e-a814-9c849652bcb3&skt=2025-11-02T17%3A14%3A25Z&ske=2025-11-03T17%3A14%3A25Z&sks=b&skv=2024-08-04&REMOVED_SIGNATURE"
 
 
 def get_xys(img: np.ndarray) -> List[List[Tuple[float, float]]]:
@@ -60,36 +60,65 @@ def get_xys(img: np.ndarray) -> List[List[Tuple[float, float]]]:
     return opt
 
 
-
-if __name__ == "__main__":
-    # Example usage for debugging
-    img_url = get_image_url("A cartoon of a dog", model="dall-e-3")
-    # img_url = "https://REMOVED_SECRET_DOMAIN.blob.core.windows.net/private/org-wZmXWiEEKhBYtviUXA4xBoUp/user-IkZP1XcNbcjq10i6pQrYzD68/img-FuyA0P3TIKxd2Exr0RU0XJDw.png?st=2025-09-29T08%3A14%3A21Z&se=2025-09-29T10%3A14%3A21Z&sp=r&sv=2024-08-04&sr=b&rscd=inline&rsct=image/png&REMOVED_SKOID&sktid=a48cca56-e6da-484e-a814-9c849652bcb3&skt=2025-09-29T09%3A14%3A21Z&ske=2025-09-30T09%3A14%3A21Z&sks=b&skv=2024-08-04&REMOVED_SIGNATURE"
-    img = requests.get(img_url).content
-    img = cv2.imdecode(np.frombuffer(img, dtype=np.uint8), cv2.IMREAD_COLOR)
-
-    xys = get_xys(img)
+def scale_paths(xys: List[List[Tuple[float, float]]], target_extent: float) -> List[List[Tuple[float, float]]]:
+    """
+    Scale contours to fit within a square of size target_extent while preserving aspect ratio
+    and centering along the shorter dimension.
+    """
+    if not xys:
+        return []
 
     points = [(x, y) for contour in xys for x, y in contour]
-    minx, miny = min(x for x,y in points), min(y for x,y in points)
-    maxx, maxy = max(x for x,y in points), max(y for x,y in points)
+    minx, miny = min(x for x, y in points), min(y for x, y in points)
+    maxx, maxy = max(x for x, y in points), max(y for x, y in points)
     width, height = maxx - minx, maxy - miny
 
-    scale = 235 / max(width, height)
+    if width == 0 and height == 0:
+        return [[(0.0, 0.0) for _ in contour] for contour in xys]
+
+    scale = float(target_extent) / max(width, height)
     scaled = [[((x - minx) * scale, (y - miny) * scale) for x, y in contour] for contour in xys]
-    
-    offset = (235 - min(width, height) * scale) / 2
+
+    offset = (float(target_extent) - min(width, height) * scale) / 2
     if width > height:
         scaled_xys = [[(x, y + offset) for x, y in contour] for contour in scaled]
     else:
         scaled_xys = [[(x + offset, y) for x, y in contour] for contour in scaled]
 
+    min_dist = 0.5
+    final_xys = []
+    for contour in scaled_xys:
+        contour.append(contour[0])
+        last_point = contour[0]
+        final_contour = []
+        for point in contour:
+            dist = np.linalg.norm(np.array(point) - np.array(last_point))
+            if dist > min_dist:
+                final_contour.append(point)
+                last_point = point
+        final_xys.append(final_contour)
+
+    return final_xys
+
+
+if __name__ == "__main__":
+    # Example usage for debugging
+    img_url = get_image_url("A happy cartoon rhino", model="dall-e-3")
+    img = requests.get(img_url).content
+    img = cv2.imdecode(np.frombuffer(img, dtype=np.uint8), cv2.IMREAD_COLOR)
+
+    xys = get_xys(img)
+
+    scaled_xys = scale_paths(xys, 235)
+
     for contour in scaled_xys:
         contour.append(contour[0])  # close the contour
+        xs = []
+        ys = []
         for point in contour:
-            x = round(point[0])
-            y = round(point[1])
-            plt.plot(x, y, 'r.', markersize=1)
+            xs.append(point[0])
+            ys.append(point[1])
+        plt.plot(xs, ys, 'black', linewidth=0.5)
 
     plt.xlim(0, 235)
     plt.ylim(0, 235)
