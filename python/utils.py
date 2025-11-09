@@ -27,7 +27,6 @@ def get_image_url(prompt: str, model: str = "dall-e-2", size: str = "1024x1024")
     print("Generated image in URL: ", result.data[0].url)
 
     return result.data[0].url
-    # return "https://REMOVED_SECRET_DOMAIN.blob.core.windows.net/private/org-wZmXWiEEKhBYtviUXA4xBoUp/user-IkZP1XcNbcjq10i6pQrYzD68/img-bVhVMwuDEOJLfp6GFPjLbCAM.png?st=2025-11-02T16%3A14%3A25Z&se=2025-11-02T18%3A14%3A25Z&sp=r&sv=2024-08-04&sr=b&rscd=inline&rsct=image/png&REMOVED_SKOID&sktid=a48cca56-e6da-484e-a814-9c849652bcb3&skt=2025-11-02T17%3A14%3A25Z&ske=2025-11-03T17%3A14%3A25Z&sks=b&skv=2024-08-04&REMOVED_SIGNATURE"
 
 
 def get_xys(img: np.ndarray) -> List[List[Tuple[float, float]]]:
