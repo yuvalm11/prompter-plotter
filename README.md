@@ -2,7 +2,7 @@
 ## Introduction
 
 
-![ Watch the video in the repo! ](https://github.com/user-attachments/assets/4e38d26d-b78d-4b40-9968-4daa16c79359)
+![ Watch the video in the repo! ](https://github.com/user-attachments/assets/9e9a56d0-ac93-448c-80e3-ed26cfc0d670)
 
 
 I am building a machine that will use AI image generation to process a natural language text prompt into a real life drawing. 
