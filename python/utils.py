@@ -16,8 +16,7 @@ def get_image_url(prompt: str, model: str = "dall-e-2", size: str = "1024x1024")
     and will be edited to include stylistic features.
     """
     instruction = prompt
-    stylistic_features = ". Make it a line drawing. keep it very simple. Use a black line on a white background."
-    prompt += stylistic_features
+    prompt = "A cartoon of a " + prompt + ". Make it a line drawing. keep it very simple. Use a black line on a white background only. try to use long strokes and avoid small details."
 
     result = client.images.generate(
         model=model,
@@ -103,9 +102,10 @@ def scale_paths(xys: List[List[Tuple[float, float]]], target_extent: float) -> L
 
 if __name__ == "__main__":
     # Example usage for debugging
-    img_url = get_image_url("A happy cartoon rhino", model="dall-e-3")
+    img_url = get_image_url("a dancing monkey", model="dall-e-3")
     img = requests.get(img_url).content
     img = cv2.imdecode(np.frombuffer(img, dtype=np.uint8), cv2.IMREAD_COLOR)
+    print(img_url)
 
     xys = get_xys(img)
 
@@ -118,7 +118,7 @@ if __name__ == "__main__":
         for point in contour:
             xs.append(point[0])
             ys.append(point[1])
-        plt.plot(xs, ys, 'black', linewidth=0.5)
+        plt.plot(xs, ys, 'black', linewidth=3)
 
     plt.xlim(0, 235)
     plt.ylim(0, 235)

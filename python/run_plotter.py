@@ -29,8 +29,8 @@ system_twin_to_real_ms = 200
 class PlotterController:
     def __init__(
             self, 
-            draw_rate: int = 150, 
-            jog_rate: int = 250,
+            draw_rate: int = 80, 
+            jog_rate: int = 100,
             machine_extents = [235, 305]
         ):
         self.osap = None

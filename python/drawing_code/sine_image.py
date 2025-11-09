@@ -1,7 +1,11 @@
+import matplotlib.pyplot as plt
+import numpy as np
+import cv2
+
 box_height = 7
 box_width = 1
-min_freq = 1
-max_freq = 5
+min_freq = 2
+max_freq = 6
 num_points = 2
 
 img = cv2.imread("python/svg/test_files/Unknown-2.png", cv2.IMREAD_GRAYSCALE)
@@ -44,5 +48,6 @@ for y_start in range(0, pic_height, box_height):
             ys = np.concatenate((ys, y))
 
 
-for i in range(len(xs)):
-    await machine.queue_planner.goto_via_queue([xs[i], ys[i], 0], draw_rate)
+plt.plot(xs, ys, linewidth=1.2)
+plt.gca().invert_yaxis()
+plt.show()

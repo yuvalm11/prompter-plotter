@@ -174,9 +174,9 @@ async def api_image(file: UploadFile = File(...)) -> Dict[str, Any]:
     extent = min(controller.machine_extents)
     pts = scale_paths(xys, extent)
     pts = [[(0, 0), (235, 0), (235, 235), (0, 235)]] + pts
-    for contour in pts:
-        for point in contour:
-            plt.plot(point[0], point[1], 'r.')
+    # for contour in pts:
+    #     for point in contour:
+    #         plt.plot(point[0], point[1], 'r.')
     # plt.show()
 
     await _queue_points(pts)
