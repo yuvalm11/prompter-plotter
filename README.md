@@ -1,27 +1,27 @@
 # Prompter Plotter
 ## Introduction
 
+I built a machine that uses AI image generation to process a natural language text prompt into a real life drawing. 
+
+After providing a creative unrestricted request, the user slowly gets to see their prompt coming to life in the physical world.
+
+I wanted to connect my love for machine building with creative artistic work and generative algorithms.
 
 ![ Watch the video in the repo! ](https://github.com/user-attachments/assets/9e9a56d0-ac93-448c-80e3-ed26cfc0d670)
 
+Heres is the final result of the machine drawing a dancing monkey.
 
-I am building a machine that will use AI image generation to process a natural language text prompt into a real life drawing. 
-
-After providing a creative unrestricted request, the user will have to wait and see their prompt slowly comes to life in the physical world.
-
-I wanted to connect my love for machine building with creative artistic work and generative algorithms.
+![](/assets/monkey.jpg)
 
 I relied a lot on Jake Read's stepper motor control firmware and circuits. I was also (heavily) inspired Quentin Bolsée's mechanical design idea for the machine itself. So many thanks to both of them. 
 
 ## Mechanics
 
-
-![ Watch the video in the repo! ](https://github.com/user-attachments/assets/ebbefab2-2eee-4592-a7b4-9ad754dcc5d3)
-
-
 The machine achieves a fast and smooth 2-axis motion by controlling two carriages on only one track. If the distance between the carriages stays the same, and the carriages move along the track, the pointer will move on the x-axis. 
 
 If the distance between the carriages changes however, the v-shaped arm will get pushed \ pulled and create the y-axis motion.
+
+![ Watch the video in the repo! ](https://github.com/user-attachments/assets/ebbefab2-2eee-4592-a7b4-9ad754dcc5d3)
 
 **Specs:**
 \
@@ -57,9 +57,8 @@ and the resulting machine instructions look like this:
 
 ### Future improvements
 
-- [ ] fine-tune the threshold for the minimum distance between drawing points to avoid overlapping
-- [ ] Add a progress bar to the web interface to show the user how much of the drawing has been completed
-- [ ] Add a live speed control to the web interface
+- [ ] A progress bar to show the user how much of the drawing has been completed
+- [ ] Live speed control in the web interface
 - [ ] Emergency stop button
 - [ ] Artistic algorithm, shading, etc.
 - [x] Make a good demo video! 
