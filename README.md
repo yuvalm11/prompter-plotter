@@ -31,9 +31,9 @@ I also used MGN12 rails for both the main track and the V tracks as well as GT2 
 
 ## Electronics
 
-Each stepper motor is controlled by a XIAO RP2040 microcontroller on Jake's board for a dual H-bridge stepper control. The board takes care of power management as it takes a 20v voltage from an external power supply. Both microcontrollers' clock can are synchronized with each other and the computer running them in order to achieve accurate, full machine level control.
+Each stepper motor is controlled by a XIAO RP2040 microcontroller on Jake's board for a dual H-bridge stepper control. The board takes care of power management as it takes a 20v voltage from an external power supply. Both microcontrollers' clocks are synchronized with each other and the computer running them in order to achieve accurate, full machine level control.
 
-The servo is also controlled by a XIAO RP2040.
+The servo is also controlled by a XIAO RP2040 with a firmware I wrote based on Jake's OSAP firmware. If you watch carefully in the video above, you can see a funny looking limit switch I patched at the top of the end effector. This is used to get a signal of the pen position and avoid unwanted pen drops.
 
 ## Machine operation software
 
