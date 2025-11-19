@@ -184,7 +184,7 @@ class MAXLQueuePlanner:
         p_distance = np.linalg.norm(p_delta)
 
         if p_distance < self.min_distance:
-            print(f"MAXL: WARNING: rejecting move of {p_distance:.6f} for all axes vs min {self.min_distance}")
+            # print(f"MAXL: WARNING: rejecting move of {p_distance:.6f} for all axes vs min {self.min_distance}")
             self._profiler_addsegment.stop() 
             return 
         

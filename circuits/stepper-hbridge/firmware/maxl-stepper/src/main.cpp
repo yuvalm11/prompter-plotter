@@ -17,7 +17,7 @@ Adafruit_NeoPixel pixel(1, PIN_NEOPIXEL, NEO_GRB + NEO_KHZ800);
 // motor_x_front
 // motor_y 
 
-OSAP_Runtime osap("MAXLStepper", "motor_elbow");
+OSAP_Runtime osap("MAXLStepper", "motor_a");
 OSAP_Gateway_USBCDC_COBS<decltype(Serial)> serLink(&Serial, "usb");
 // OSAP_Gateway_UART_COBS_CRC16<decltype(Serial1)> mudLink(&Serial1, 1000000, 
 //   "backpack_mudl",

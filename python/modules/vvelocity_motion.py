@@ -6,7 +6,6 @@ import numpy.typing as npt
 from osap.osap import OSAP 
 
 from modules.maxl_stepper import MAXLStepper 
-from modules.servo_thing import ServoThing
 
 from maxl.types import MAXLInterpolationIntervals 
 from maxl.core import MAXLCore, MAXLCoreConfig 

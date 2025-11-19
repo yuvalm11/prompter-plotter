@@ -1,9 +1,14 @@
 #include "osap/src/osap.h"
 #include <Servo.h>
+#include <Adafruit_NeoPixel.h>
 
 #define PIN_SERVO D10
 #define PIN_LIMIT_SWITCH D0
 #define PIN_LED_WD PIN_LED_G
+#define PIN_NEOPIXEL 12
+#define PIN_NEOPIXEL_POWER 11
+
+Adafruit_NeoPixel pixel(1, PIN_NEOPIXEL, NEO_GRB + NEO_KHZ800);
 
 Servo myServo;
 
@@ -16,7 +21,7 @@ enum PenState {
 
 PenState pen_state = PEN_IDLE;
 uint32_t pen_down_start_time = 0;
-const uint32_t PEN_DOWN_DURATION_MS = 700;
+const uint32_t PEN_DOWN_DURATION_MS = 400;
 
 void pen_up(void){
   // Start raising pen - loop() will handle the state machine
@@ -49,10 +54,16 @@ void setup() {
   
   // Setup watchdog LED
   pinMode(PIN_LED_WD, OUTPUT);
+
+  // Setup neopixel
+  pixel.begin();
+  pinMode(PIN_NEOPIXEL_POWER, OUTPUT);
+  digitalWrite(PIN_NEOPIXEL_POWER, HIGH);
 }
 
 uint32_t wdBlinkInterval = 50;
 uint32_t wdBlinkLast = 0;
+bool blinkState = false;
 
 void loop() {
   osap.loop();
@@ -90,6 +101,13 @@ void loop() {
   if(wdBlinkLast + wdBlinkInterval < millis()){
     wdBlinkLast = millis();
     digitalWrite(PIN_LED_WD, !digitalRead(PIN_LED_WD));
+    if(blinkState){
+      pixel.setPixelColor(0, pixel.Color(0, 100, 0));
+    } else {
+      pixel.setPixelColor(0, pixel.Color(0, 0, 0));
+    }
+    pixel.show();
+    blinkState = !blinkState;
   }
 }
 

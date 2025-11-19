@@ -1,19 +1,20 @@
-import os
-import sys
-import asyncio
+import uvicorn
 from fastapi import FastAPI, UploadFile, File, Form
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import HTMLResponse
 from typing import Dict, Any, List, Tuple
-import uvicorn
-import numpy as np
+
 import cv2
-import matplotlib.pyplot as plt
 import requests
-import matplotlib.pyplot as plt
+import numpy as np
+
+import os
+import sys
+sys.path.insert(0, os.path.dirname(__file__))
+from drawing_code.svg import process_svg, merge_paths, sort_paths
 
 from run_plotter import PlotterController
-from utils import get_image_url, get_xys, scale_paths
+from utils import get_image_url, get_xys, scale_paths_to_rect
 
 app = FastAPI()
 
@@ -156,9 +157,8 @@ async def api_prompt(payload: Dict[str, Any]) -> Dict[str, Any]:
     img = requests.get(img_url).content
     img = cv2.imdecode(np.frombuffer(img, dtype=np.uint8), cv2.IMREAD_COLOR)
     xys = get_xys(img)
-    extent = min(controller.machine_extents)
-    pts = scale_paths(xys, extent)
-    pts = [[(0, 0), (235, 0), (235, 235), (0, 235)]] + pts
+    pts = scale_paths_to_rect(xys, 235, 305)
+    pts = [[(0, 0), (235, 0), (235, 305), (0, 305)]] + pts
 
     print(controller.machine.queue_planner._get_position_tail())
     
@@ -167,37 +167,47 @@ async def api_prompt(payload: Dict[str, Any]) -> Dict[str, Any]:
 
 @app.post("/api/image")
 async def api_image(file: UploadFile = File(...)) -> Dict[str, Any]:
-    data = await file.read()
-    arr = np.frombuffer(data, dtype=np.uint8)
-    img = cv2.imdecode(arr, cv2.IMREAD_COLOR)
-    xys = get_xys(img)
-    extent = min(controller.machine_extents)
-    pts = scale_paths(xys, extent)
-    pts = [[(0, 0), (235, 0), (235, 235), (0, 235)]] + pts
-    # for contour in pts:
-    #     for point in contour:
-    #         plt.plot(point[0], point[1], 'r.')
-    # plt.show()
+    if file.filename.endswith(".svg"):
+        # save temp file
+        with open('temp.svg', "wb") as f:
+            f.write(await file.read())
+        pts = process_svg('temp.svg', bounding_box=(-38, 273, 93, 303), precision=0.3)
+        os.remove('temp.svg')
 
-    await _queue_points(pts)
+        pts = sort_paths(pts)
+        pts = merge_paths(pts, threshold=1.0)
+        pts.append([(-40,94), (-40, 305),(275, 305),(275, 94),(-40, 94)])
+        should_close = False
+
+    else:
+        data = await file.read()
+        arr = np.frombuffer(data, dtype=np.uint8)
+        img = cv2.imdecode(arr, cv2.IMREAD_COLOR)
+    
+        xys = get_xys(img)
+        pts = scale_paths_to_rect(xys, 235, 305)
+        should_close = True
+    
+    await _queue_points(pts, should_close)
     return {"status": "ok", "points": len(pts)}
 
-async def _queue_points(points: List[List[Tuple[float, float]]]):
+async def _queue_points(points: List[List[Tuple[float, float]]], should_close: bool = True):
     # pen up
-    await controller.goto_and_wait([0,0,0], controller.draw_rate)
+    await controller.goto_and_wait([0,0,0], controller.jog_rate)
+    await controller.goto_and_wait([235,0,0], controller.jog_rate)
+    await controller.goto_and_wait([365,305,0], controller.jog_rate)
+    await controller.goto_and_wait([-130,305,0], controller.jog_rate)
+    await controller.goto_and_wait([0,0,0], controller.jog_rate)
+
     for contour in points:
-        contour.append(contour[0])  # close the contour
+        if should_close:contour.append(contour[0])  # close the contour
         point = contour[0]
-        await controller.goto_and_wait([point[0], point[1], 0], controller.draw_rate)
+        await controller.goto_and_wait([point[0], point[1], 0], controller.jog_rate)
         await controller.goto_and_wait([point[0], point[1], 1], controller.draw_rate)
         for point in contour:
-            x, y = point
-            if 0 <= x <= 235 and 0 <= y <= 235:
-                point = [point[0], point[1], 1]
-                await controller.goto(point, controller.draw_rate)
-            else:
-                print(f"WARNING: Point ({x}, {y}) is outside trapezoid bounds")
-                continue
+            point = [point[0], point[1], 1]
+            await controller.goto(point, controller.draw_rate)
+
         await controller.goto_and_wait([point[0], point[1], 0], controller.draw_rate)
     
     await controller.goto_origin()

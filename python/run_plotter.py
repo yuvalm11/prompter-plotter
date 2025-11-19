@@ -29,8 +29,8 @@ system_twin_to_real_ms = 200
 class PlotterController:
     def __init__(
             self, 
-            draw_rate: int = 80, 
-            jog_rate: int = 100,
+            draw_rate: int = 100, 
+            jog_rate: int = 150,
             machine_extents = [235, 305]
         ):
         self.osap = None
@@ -84,7 +84,7 @@ class PlotterController:
     async def goto_origin(self):
         if not self.machine:
             raise RuntimeError("Machine not started")
-        await self.goto_and_wait([0,0,0])
+        await self.goto_and_wait([0,0,0], self.jog_rate)
         
 
     async def flush(self):
@@ -126,9 +126,9 @@ class PlotterController:
         await self.machine.queue_planner.goto_and_await(position, rate)
         if position[2] != self.pen_position:
             self.pen_position = position[2]
-            if self.pen_position == 0: await self.servo_patch.pen_up()
-            else: await self.servo_patch.pen_down()
-            await asyncio.sleep(1)
+            if self.pen_position == 0: await self.servo_patch.pen_up();
+            else: await self.servo_patch.pen_down();
+            await asyncio.sleep(0.2)
 
     async def shutdown(self):
         try:

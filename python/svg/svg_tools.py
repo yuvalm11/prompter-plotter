@@ -1,6 +1,7 @@
 import svgpathtools
 import numpy as np
 import matplotlib.pyplot as plt
+from tqdm import tqdm
 
 def move_path(path, x_offset, y_offset):
     """
@@ -41,7 +42,7 @@ def move_all_paths(paths, x_offset, y_offset):
 
     moved_paths = []
     
-    for path in paths:
+    for path in tqdm(paths):
         moved_path = move_path(path, x_offset, y_offset)
         moved_paths.append(moved_path)
     
@@ -86,7 +87,7 @@ def approximate_path_to_segments(path, precision=1.0):
 
 def scale_and_process_svg(svg_file, bounding_box, precision=1.0):
     paths, attributes = svgpathtools.svg2paths(svg_file)
-
+    print(paths)
     # Calculate current bounding box of the SVG
     x_min, x_max, y_min, y_max = svgpathtools.path.Path(*paths).bbox()
     print(F"File has: min, max x {x_min:.2f}, {x_max:.2f} ... min, max y {y_min:.2f} {y_max:.2f}")
@@ -109,7 +110,7 @@ def scale_and_process_svg(svg_file, bounding_box, precision=1.0):
     all_segments = []
     
     # Scale and then segment each path
-    for path in paths:
+    for path in tqdm(paths):
         scaled_path = scale_path(path, scale_factor)
         segments = approximate_path_to_segments(scaled_path, precision)
         all_segments.append(segments)
@@ -119,9 +120,9 @@ def scale_and_process_svg(svg_file, bounding_box, precision=1.0):
 
 if __name__ == "__main__":
     # Example usage
-    svg_file = "./python/svg/test_files/ball.svg"  # Replace with your SVG file path
-    precision = 1.0  # 1mm precision
-    points_lists = scale_and_process_svg(svg_file, (200, 200), precision)
+    svg_file = "./data/proc.svg"  # Replace with your SVG file path
+    precision = 0.1  # 1mm precision
+    points_lists = scale_and_process_svg(svg_file, (235, 305), precision)
 
     xs = []
     ys = []

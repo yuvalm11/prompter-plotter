@@ -83,7 +83,46 @@ def scale_paths(xys: List[List[Tuple[float, float]]], target_extent: float) -> L
     else:
         scaled_xys = [[(x + offset, y) for x, y in contour] for contour in scaled]
 
-    min_dist = 0.5
+    min_dist = 1
+    final_xys = []
+    for contour in scaled_xys:
+        contour.append(contour[0])
+        last_point = contour[0]
+        final_contour = []
+        for point in contour:
+            dist = np.linalg.norm(np.array(point) - np.array(last_point))
+            if dist > min_dist:
+                final_contour.append(point)
+                last_point = point
+        final_xys.append(final_contour)
+
+    return final_xys
+ 
+ 
+def scale_paths_to_rect(xys: List[List[Tuple[float, float]]], target_width: float, target_height: float, min_dist: float = 3) -> List[List[Tuple[float, float]]]:
+    """
+    Scale contours to fit within a rectangle of size (target_width x target_height) while preserving
+    aspect ratio and centering along the leftover dimension(s).
+    """
+    if not xys:
+        return []
+
+    points = [(x, y) for contour in xys for x, y in contour]
+    minx, miny = min(x for x, y in points), min(y for x, y in points)
+    maxx, maxy = max(x for x, y in points), max(y for x, y in points)
+    width, height = maxx - minx, maxy - miny
+
+    if width == 0 and height == 0:
+        return [[(target_width / 2.0, target_height / 2.0) for _ in contour] for contour in xys]
+
+    scale = min(float(target_width) / width if width != 0 else float('inf'),
+                float(target_height) / height if height != 0 else float('inf'))
+    scaled = [[((x - minx) * scale, (y - miny) * scale) for x, y in contour] for contour in xys]
+
+    offset_x = (float(target_width) - width * scale) / 2.0
+    offset_y = (float(target_height) - height * scale) / 2.0
+    scaled_xys = [[(x + offset_x, y + offset_y) for x, y in contour] for contour in scaled]
+
     final_xys = []
     for contour in scaled_xys:
         contour.append(contour[0])
@@ -101,25 +140,29 @@ def scale_paths(xys: List[List[Tuple[float, float]]], target_extent: float) -> L
 
 if __name__ == "__main__":
     # Example usage for debugging
-    img_url = get_image_url("a dancing monkey", model="dall-e-3")
-    img = requests.get(img_url).content
-    img = cv2.imdecode(np.frombuffer(img, dtype=np.uint8), cv2.IMREAD_COLOR)
-    print(img_url)
+    # img_url = get_image_url("a dancing monkey", model="dall-e-3")
+    # img = requests.get(img_url).content
+    # img = cv2.imdecode(np.frombuffer(img, dtype=np.uint8), cv2.IMREAD_COLOR)
+    # print(img_url)
+
+    img = cv2.imread("./data/proc.png", cv2.IMREAD_COLOR_BGR)
 
     xys = get_xys(img)
+    # print(xys)
 
-    scaled_xys = scale_paths(xys, 235)
+    scaled_xys = scale_paths_to_rect(xys, 235, 305, min_dist=3)
 
     for contour in scaled_xys:
+        if not contour: continue
         contour.append(contour[0])  # close the contour
         xs = []
         ys = []
         for point in contour:
             xs.append(point[0])
             ys.append(point[1])
-        plt.plot(xs, ys, 'black', linewidth=3)
+        plt.plot(xs, ys, 'black', linewidth=1)
 
     plt.xlim(0, 235)
-    plt.ylim(0, 235)
+    plt.ylim(0, 305)
     plt.gca().set_aspect('equal', adjustable='box')
     plt.show()
