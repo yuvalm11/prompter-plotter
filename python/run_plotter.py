@@ -3,19 +3,19 @@ import sys
 import warnings
 sys.path.insert(0, os.path.dirname(__file__))
 
-import cv2
+# import cv2
 import asyncio
 import traceback
-import numpy as np
+# import numpy as np
 from osap.osap import OSAP
 from osap.bootstrap.auto_usb_serial.auto_usb_serial import AutoUSBPorts
 from maxl.types import MAXLInterpolationIntervals 
 from modules.vvelocity_motion import VVelocityMachineMotion
 from modules.servo_patch import ServoPatch
-from svg import svg_tools
+# from svg import svg_tools
 
-import requests
-from utils import get_xys
+# import requests
+# from utils import get_xys
 
 
 system_interpolation_interval = MAXLInterpolationIntervals.INTERVAL_16384

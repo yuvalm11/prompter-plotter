@@ -1,17 +1,25 @@
-import svgpathtools
+import os
+import sys
+
 import numpy as np
-import matplotlib.pyplot as plt
 from tqdm import tqdm
+import svgpathtools as svg
+import matplotlib.pyplot as plt
 
-def process_svg(file_path: str, precision = 0.3, bounding_box = (0, 235, 0, 305)):
-    paths, _ = svgpathtools.svg2paths(file_path)
+sys.path.insert(0, os.path.dirname(__file__))
+sys.path.insert(0, os.path.dirname(os.path.dirname(__file__)))
+from utils import get_bounding_box
 
-    if bounding_box is None:
-        scale_factor = 1.0
-    else:
-        min_x, max_x, min_y, max_y = svgpathtools.path.Path(*paths).bbox()
-        width, height = bounding_box[1] - bounding_box[0], bounding_box[3] - bounding_box[2]
-        scale_factor = -abs(min(width / (max_x - min_x), height / (max_y - min_y)))
+
+
+def process_svg(file_path: str, precision = 0.3, min_length = 0.1, add_border = False):
+    paths, _ = svg.svg2paths(file_path)
+
+    min_x, max_x, min_y, max_y = svg.path.Path(*paths).bbox()
+    aspect_ratio = (max_x - min_x) / (max_y - min_y)
+    bounding_box = get_bounding_box(aspect_ratio)
+    width, height = bounding_box[1] - bounding_box[0], bounding_box[3] - bounding_box[2]
+    scale_factor = -abs(min(width / (max_x - min_x), height / (max_y - min_y)))
 
 
     print(f"Scaling by {scale_factor}")
@@ -20,7 +28,7 @@ def process_svg(file_path: str, precision = 0.3, bounding_box = (0, 235, 0, 305)
     paths = [path.scaled(scale_factor) for path in paths]
     paths = [path.translated(complex(bounding_box[0], bounding_box[2])) for path in paths]
 
-    min_x, max_x, min_y, max_y = svgpathtools.path.Path(*paths).bbox()
+    min_x, max_x, min_y, max_y = svg.path.Path(*paths).bbox()
 
     print(f"Bounding box: {min_x}, {max_x}, {min_y}, {max_y}")
 
@@ -28,21 +36,23 @@ def process_svg(file_path: str, precision = 0.3, bounding_box = (0, 235, 0, 305)
     for path in paths:
         pts = []
         for segment in path:
-            if segment.length() < precision:
+            if segment.length() < min_length:
                 continue
-            if type(segment) == svgpathtools.QuadraticBezier:
+            if type(segment) == svg.QuadraticBezier:
                 pts += approx_quadratic_bezier(segment, precision)
-            elif type(segment) == svgpathtools.CubicBezier:
+            elif type(segment) == svg.CubicBezier:
                 pts += approx_cubic_bezier(segment, precision)
-            elif type(segment) == svgpathtools.Line:
+            elif type(segment) == svg.Line:
                 pts += [(segment.start.real, segment.start.imag), (segment.end.real, segment.end.imag)]
         
         if pts: output.append(pts)
 
+    if add_border: output.append([(min_x, min_y), (min_x, max_y), (max_x, max_y), (max_x, min_y), (min_x, min_y)])
+
     return output
 
 
-def approx_quadratic_bezier(segment: svgpathtools.QuadraticBezier, precision: float):
+def approx_quadratic_bezier(segment: svg.QuadraticBezier, precision: float):
     if precision <= 0:
         raise ValueError("precision must be a positive number")
 
@@ -65,7 +75,8 @@ def approx_quadratic_bezier(segment: svgpathtools.QuadraticBezier, precision: fl
     subdivide(segment.start, segment.control, segment.end, result)
     return result
 
-def approx_cubic_bezier(segment: svgpathtools.CubicBezier, precision: float):
+
+def approx_cubic_bezier(segment: svg.CubicBezier, precision: float):
     if precision <= 0:
         raise ValueError("precision must be a positive number")
 
@@ -91,15 +102,24 @@ def approx_cubic_bezier(segment: svgpathtools.CubicBezier, precision: float):
     subdivide(segment.start, segment.control1, segment.control2, segment.end, result)
     return result
 
+
 def sort_paths(paths: list):
     output = []
 
     last_end = (0,0)
     for _ in tqdm(range(len(paths))):
-        distances = [np.linalg.norm(np.array(p[0]) - np.array(last_end)) for p in paths]
-        closest_index = np.argmin(distances)
-        output.append(paths[closest_index])
-        last_end = paths[closest_index][-1]
+        start_distances = [np.linalg.norm(np.array(p[0]) - np.array(last_end)) for p in paths]
+        end_distances = [np.linalg.norm(np.array(p[-1]) - np.array(last_end)) for p in paths]
+        closest_start_index = np.argmin(start_distances)
+        closest_end_index = np.argmin(end_distances)
+        if start_distances[closest_start_index] <= end_distances[closest_end_index]:
+            closest_index = closest_start_index
+            path_to_add = paths[closest_index]
+        else:
+            closest_index = closest_end_index
+            path_to_add = paths[closest_index][::-1]
+        output.append(path_to_add)
+        last_end = path_to_add[-1]
         paths.pop(closest_index)
     return output
 
@@ -114,26 +134,29 @@ def merge_paths(paths: list, threshold: float = 1.0):
 
     
 if __name__ == "__main__":
-    paths = process_svg("./data/proc.svg", bounding_box=(-38, 273, 93, 303), precision=0.3)
+    paths = process_svg("./data/gh.svg", precision=0.05, min_length=1.5, add_border=True)
     paths = sort_paths(paths)
 
-    paths = merge_paths(paths, threshold=1.0)
-    paths.append([(-40,94), (-40, 305),(275, 305),(275, 94),(-40, 94)])
-
-    for p in paths:
-        xs, ys= [], []
-        for x, y in p:
-            xs.append(x)
-            ys.append(y)
-        plt.plot(xs, ys, linewidth=1, color='black')
-        # plt.scatter(xs[0], ys[0], color='green', s=5)
-        # plt.scatter(xs[-1], ys[-1], color='red', s=5)
+    paths = merge_paths(paths, threshold=4.0)
+    print('Paths:', len(paths),"Anchors:", len([i for p in paths for i in p]))
 
     trap_x, trap_y = [0, 235, 365, -130, 0], [0, 0, 305, 305, 0]
-    plt.plot(trap_x, trap_y, linewidth=1.5, color='red', linestyle='--')
 
+    # plot the trap in dashed red
+    fig, ax = plt.subplots()
+    ax.set_aspect('equal')
+    ax.plot(trap_x, trap_y, linewidth=1.5, color='red', linestyle='--')
 
-    print(len(paths))
-
-    plt.gca().set_aspect('equal', adjustable='box')
+    # animations of the paths
+    ax.set_xlim(-150, 400)
+    ax.set_ylim(-50, 350)
+    plt.ion()
+    for path in paths:
+        xs, ys = zip(*path)
+        ax.plot(xs, ys, color='black', linewidth=1)
+        # ax.scatter(xs[0], ys[0], color='green', s=5)
+        # ax.scatter(xs[-1], ys[-1], color='red', s=5)
+        plt.pause(0.1)
+    plt.ioff()
     plt.show()
+    

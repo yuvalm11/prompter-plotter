@@ -171,12 +171,11 @@ async def api_image(file: UploadFile = File(...)) -> Dict[str, Any]:
         # save temp file
         with open('temp.svg', "wb") as f:
             f.write(await file.read())
-        pts = process_svg('temp.svg', bounding_box=(-38, 273, 93, 303), precision=0.3)
+        pts = process_svg('temp.svg', precision=0.05, min_length=1.5, add_border=True)
         os.remove('temp.svg')
 
         pts = sort_paths(pts)
         pts = merge_paths(pts, threshold=1.0)
-        pts.append([(-40,94), (-40, 305),(275, 305),(275, 94),(-40, 94)])
         should_close = False
 
     else:
@@ -193,10 +192,10 @@ async def api_image(file: UploadFile = File(...)) -> Dict[str, Any]:
 
 async def _queue_points(points: List[List[Tuple[float, float]]], should_close: bool = True):
     # pen up
-    await controller.goto_and_wait([0,0,0], controller.jog_rate)
-    await controller.goto_and_wait([235,0,0], controller.jog_rate)
-    await controller.goto_and_wait([365,305,0], controller.jog_rate)
-    await controller.goto_and_wait([-130,305,0], controller.jog_rate)
+    await controller.goto([0,0,0], controller.jog_rate)
+    await controller.goto([235,0,0], controller.jog_rate)
+    await controller.goto([365,305,0], controller.jog_rate)
+    await controller.goto([-130,305,0], controller.jog_rate)
     await controller.goto_and_wait([0,0,0], controller.jog_rate)
 
     for contour in points:

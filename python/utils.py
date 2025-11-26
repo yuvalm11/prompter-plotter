@@ -2,8 +2,7 @@ import cv2
 import numpy as np
 import matplotlib.pyplot as plt
 from openai import OpenAI
-import base64
-import requests
+import math
 from typing import List, Tuple
 
 
@@ -136,6 +135,24 @@ def scale_paths_to_rect(xys: List[List[Tuple[float, float]]], target_width: floa
         final_xys.append(final_contour)
 
     return final_xys
+
+def get_bounding_box(aspect_ratio: float) -> Tuple[float, float]:
+    """
+    given an aspect ratio, return the biggest area rectangle in the trapezoid of the machine
+    """
+    # (365,305) (235, 305) (0, 305) (-130, 305)
+    #           (235,   0) (0,   0)
+    
+    # this formula is a bunch of algebra from this desmos: https://www.desmos.com/calculator/1mbnr7mem7
+    w = 30195*aspect_ratio/(52+61*aspect_ratio)
+    h = w/aspect_ratio
+
+    x_min = math.ceil((235 - w)/2)
+    x_max = math.floor((235 + w)/2)
+    y_min = math.ceil(305 - h)
+    y_max = 305
+
+    return (x_min, x_max, y_min, y_max)
 
 
 if __name__ == "__main__":
